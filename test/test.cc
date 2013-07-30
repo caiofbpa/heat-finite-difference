@@ -29,7 +29,7 @@ void assertVectorsHaveEqualValues(vector<double> expected, vector<double> actual
 		ASSERT_NEAR(expected[i], actual[i], delta);
 }
 
-TEST(HeatFiniteDifferenceTestSuite, ZeroTemperatures_MiddleShouldStayAtZero){
+TEST(HeatFiniteDifferenceTestSuite, ZeroTemperature_SteadyState_AllTemperaturesShouldStayTheSame){
 	double initial[] = {0.0, 0.0, 0.0};
 	double expected[] = {0.0, 0.0, 0.0};
 	vector<double> temperatures (initial, initial + sizeof(initial) / sizeof(initial[0]));
@@ -38,7 +38,7 @@ TEST(HeatFiniteDifferenceTestSuite, ZeroTemperatures_MiddleShouldStayAtZero){
 	assertVectorsHaveEqualValues(expectedTemperatures, nextTemperatures);
 }
 
-TEST(HeatFiniteDifferenceTestSuite, EqualTemperatures_MiddleShouldStayAtSameTemperature){
+TEST(HeatFiniteDifferenceTestSuite, SameTemperature_SteadyState_AllTemperaturesShouldStayTheSame){
 	double initial[] = {1.0, 1.0, 1.0};
 	double expected[] = {1.0, 1.0, 1.0};
 	vector<double> temperatures (initial, initial + sizeof(initial) / sizeof(initial[0]));
