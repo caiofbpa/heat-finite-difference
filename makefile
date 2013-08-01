@@ -13,7 +13,7 @@ INC_PATHS = -I$(INC_DIR) -I$(OBJ_DIR)
 VPATH = $(INC_DIR) $(EXAMPLE_DIR) $(OBJ_DIR) $(LIB_DIR) $(SRC_DIR) $(TEST_DIR)
 
 test: googletest
-	$(CC) -I$(TEST_DIR) $(TEST_DIR)/*.cc -std=gnu++11 $(LIB_DIR)/libgtest.a -o $(BIN_DIR)/test.bin 
+	$(CC) -I$(TEST_DIR) $(TEST_DIR)/*.cc $(LIB_DIR)/libgtest.a -o $(BIN_DIR)/test.bin
 	./$(BIN_DIR)/test.bin
 
 googletest:
