@@ -4,89 +4,74 @@
 
 using namespace std;
 
-double delta = .001;
-HeatPropagationSimulator *simulator = new HeatPropagationSimulator();
+string getOutputFromStream(FILE* stream){
+	char buffer[512];
+	string output;
+    while(fgets(buffer, sizeof(buffer), stream) != NULL)
+        output += buffer;
+    return output;
+}
 
-void assertVectorsHaveEqualValues(vector<double> expected, vector<double> actual){
-	for(int i = 0; i < expected.size(); i++)
-		ASSERT_NEAR(expected[i], actual[i], delta);
+string executeCommand(string command){
+	FILE* stream = popen(command.c_str(), "r");
+	string output = getOutputFromStream(stream);
+	pclose(stream);
+	return output;
 }
 
 TEST(HeatFiniteDifferenceTestSuite, ZeroTemperature_SteadyState_AllTemperaturesShouldStayTheSame){
-	simulator->setInitialTemperatures({0.0, 0.0, 0.0});
-	simulator->simulateIterations(1);
-	vector<double> finalTemperatures = simulator->getFinalTemperatures();
-	assertVectorsHaveEqualValues({0.0, 0.0, 0.0}, finalTemperatures);
+	string output = executeCommand("bin/main.bin 0 0 0 1");
+    ASSERT_EQ("0.000 0.000 0.000 \n", output);
 }
 
 TEST(HeatFiniteDifferenceTestSuite, SameTemperature_SteadyState_AllTemperaturesShouldStayTheSame){
-	simulator->setInitialTemperatures({1.0, 1.0, 1.0});
-	simulator->simulateIterations(1);
-	vector<double> finalTemperatures = simulator->getFinalTemperatures();
-	assertVectorsHaveEqualValues({1.0, 1.0, 1.0}, finalTemperatures);
+	string output = executeCommand("bin/main.bin 1 1 1 1");
+    ASSERT_EQ("1.000 1.000 1.000 \n", output);
 }
 
 TEST(HeatFiniteDifferenceTestSuite, GivenACoolNeighbour_MiddleTemperatureShouldCool){
-	simulator->setInitialTemperatures({20.0, 20.0, 0.0});
-	simulator->simulateIterations(1);
-	vector<double> finalTemperatures = simulator->getFinalTemperatures();
-	assertVectorsHaveEqualValues({20.0, 16.0, 0.0}, finalTemperatures);
+	string output = executeCommand("bin/main.bin 20 20 0 1");
+    ASSERT_EQ("20.000 16.000 0.000 \n", output);
 }
 
 TEST(HeatFiniteDifferenceTestSuite, GivenAHotNeighbour_MiddleTemperatureShouldHeat){
-	simulator->setInitialTemperatures({20.0, 20.0, 50.0});
-	simulator->simulateIterations(1);
-	vector<double> finalTemperatures = simulator->getFinalTemperatures();
-	assertVectorsHaveEqualValues({20.0, 26.0, 50.0}, finalTemperatures);
+	string output = executeCommand("bin/main.bin 20 20 50 1");
+    ASSERT_EQ("20.000 26.000 50.000 \n", output);
 }
 
 TEST(HeatFiniteDifferenceTestSuite, ThreeTemperatures_Integration_Case1){
-	simulator->setInitialTemperatures({24.802, 29.657, 34.604});
-	simulator->simulateIterations(1);
-	vector<double> finalTemperatures = simulator->getFinalTemperatures();
-	assertVectorsHaveEqualValues({24.802, 29.676, 34.604}, finalTemperatures);
+	string output = executeCommand("bin/main.bin 24.802 29.657 34.604 1");
+    ASSERT_EQ("24.802 29.675 34.604 \n", output);
 }
 
 TEST(HeatFiniteDifferenceTestSuite, ThreeTemperatures_Integration_Case2){
-	simulator->setInitialTemperatures({39.976, 44.986, 50.0});
-	simulator->simulateIterations(1);
-	vector<double> finalTemperatures = simulator->getFinalTemperatures();
-	assertVectorsHaveEqualValues({39.976, 44.987, 50.0}, finalTemperatures);
+	string output = executeCommand("bin/main.bin 39.976 44.986 50 1");
+    ASSERT_EQ("39.976 44.987 50.000 \n", output);
 }
 
 TEST(HeatFiniteDifferenceTestSuite, FourTemperatures_Integration_Case1){
-	simulator->setInitialTemperatures({20.0, 20.0, 16.0, 0.0});
-	simulator->simulateIterations(1);
-	vector<double> finalTemperatures = simulator->getFinalTemperatures();
-	assertVectorsHaveEqualValues({20.0, 19.2, 13.6, 0.0}, finalTemperatures);
+	string output = executeCommand("bin/main.bin 20 20 16 0 1");
+    ASSERT_EQ("20.000 19.200 13.600 0.000 \n", output);
 }
 
 TEST(HeatFiniteDifferenceTestSuite, FourTemperatures_Integration_Case2){
-	simulator->setInitialTemperatures({38.4, 30.0, 22.0, 26.0});
-	simulator->simulateIterations(1);
-	vector<double> finalTemperatures = simulator->getFinalTemperatures();
-	assertVectorsHaveEqualValues({38.4, 30.08, 24.4, 26.0}, finalTemperatures);
+	string output = executeCommand("bin/main.bin 38.4 30 22 26 1");
+    ASSERT_EQ("38.400 30.080 24.400 26.000 \n", output);
 }
 
 TEST(HeatFiniteDifferenceTestSuite, SevenTemperatures_Integration){
-	simulator->setInitialTemperatures({20.0, 50.0, 40.0, 30.0, 20.0, 10.0, 50.0});
-	simulator->simulateIterations(1);
-	vector<double> finalTemperatures = simulator->getFinalTemperatures();
-	assertVectorsHaveEqualValues({20.0, 42.0, 40.0, 30.0, 20.0, 20.0, 50.0}, finalTemperatures);
+	string output = executeCommand("bin/main.bin 20 50 40 30 20 10 50 1");
+    ASSERT_EQ("20.000 42.000 40.000 30.000 20.000 20.000 50.000 \n", output);
 }
 
 TEST(HeatFiniteDifferenceTestSuite, SevenAsymmetricTemperatures_Integration_AfterLongTime){
-	simulator->setInitialTemperatures({20.0, 50.0, 40.0, 30.0, 20.0, 10.0, 50.0});
-	simulator->simulateIterations(99);
-	vector<double> finalTemperatures = simulator->getFinalTemperatures();
-	assertVectorsHaveEqualValues({20.0, 24.987, 29.977, 34.973, 39.977, 44.987, 50.0}, finalTemperatures);
+	string output = executeCommand("bin/main.bin 20 50 40 30 20 10 50 99");
+    ASSERT_EQ("20.000 24.987 29.977 34.973 39.977 44.987 50.000 \n", output);
 }
 
 TEST(HeatFiniteDifferenceTestSuite, SevenSymmetricTemperatures_Integration_AfterLongTime){
-	simulator->setInitialTemperatures({0.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 0.0});
-	simulator->simulateIterations(100);
-	vector<double> finalTemperatures = simulator->getFinalTemperatures();
-	assertVectorsHaveEqualValues({0.0, 1.081, 2.055, 2.829, 3.326, 3.497, 3.326, 2.829, 2.055, 1.081, 0.0}, finalTemperatures);
+	string output = executeCommand("bin/main.bin 0 20 20 20 20 20 20 20 20 20 0 100");
+    ASSERT_EQ("0.000 1.081 2.055 2.829 3.326 3.497 3.326 2.829 2.055 1.081 0.000 \n", output);
 }
 
 int main(int argc, char** argv) {
