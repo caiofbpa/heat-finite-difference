@@ -1,24 +1,37 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "HeatPropagationSimulator.cc"
+#include "ParallelHeatPropagationSimulator.cc"
 
 using namespace std;
 
+void printTemperatures(vector<double> temperatures){
+	for(int i = 0; i < temperatures.size(); i++)
+		printf("%.3f ", temperatures[i]);
+	printf("\n");
+}
+
+vector<double> parseVectorFromArguments(int argc, char* argv[]){
+	vector<double> v;
+	for(int i = 1; i < (argc - 1); i++)
+		v.push_back(atof(argv[i]));
+	return v;
+}
+
+int parseNumberOfIterationsFromArguments(int argc, char* argv[]){
+	return atoi(argv[argc - 1]);
+}
+
 int main(int argc, char* argv[]){
-	int lastArgumentIndex = argc -1;
-	HeatPropagationSimulator* simulator = new HeatPropagationSimulator();
+	HeatPropagationSimulator* simulator = new ParallelHeatPropagationSimulator();
 	
-	vector<double> initialTemperatures;
-	for(int i = 1; i < lastArgumentIndex; i++)
-		initialTemperatures.push_back(atof(argv[i]));
+	vector<double> initialTemperatures = parseVectorFromArguments(argc, argv);
+	int iterations = parseNumberOfIterationsFromArguments(argc, argv);
 
 	simulator->setInitialTemperatures(initialTemperatures);
-	simulator->simulateIterations(atoi(argv[lastArgumentIndex]));
+	simulator->simulateIterations(iterations);
 	
 	vector<double> finalTemperatures = simulator->getFinalTemperatures();
-	for(int i = 0; i < finalTemperatures.size(); i++)
-		printf("%.3f ", finalTemperatures[i]);
+	printTemperatures(finalTemperatures);
 
-	printf("\n");
 	return 0;
 }

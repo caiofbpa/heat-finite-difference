@@ -3,7 +3,7 @@
 using namespace std;
 
 class HeatPropagationSimulator {
-private:
+protected:
 	vector<double> initialTemperatures, finalTemperatures;
 
 	double simulateNextTemperature(double leftNeighbour, double previousTemperature, double rightNeighbour){
