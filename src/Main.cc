@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <mpi.h>
 #include "ParallelHeatPropagationSimulator.cc"
 
 using namespace std;
@@ -7,7 +8,6 @@ using namespace std;
 void printTemperatures(vector<double> temperatures){
 	for(int i = 0; i < temperatures.size(); i++)
 		printf("%.3f ", temperatures[i]);
-	printf("\n");
 }
 
 vector<double> parseVectorFromArguments(int argc, char* argv[]){
@@ -22,7 +22,8 @@ int parseNumberOfIterationsFromArguments(int argc, char* argv[]){
 }
 
 int main(int argc, char* argv[]){
-	HeatPropagationSimulator* simulator = new ParallelHeatPropagationSimulator();
+	MPI_Init(&argc, &argv);
+	ParallelHeatPropagationSimulator* simulator = new ParallelHeatPropagationSimulator();
 	
 	vector<double> initialTemperatures = parseVectorFromArguments(argc, argv);
 	int iterations = parseNumberOfIterationsFromArguments(argc, argv);
@@ -30,8 +31,11 @@ int main(int argc, char* argv[]){
 	simulator->setInitialTemperatures(initialTemperatures);
 	simulator->simulateIterations(iterations);
 	
-	vector<double> finalTemperatures = simulator->getFinalTemperatures();
-	printTemperatures(finalTemperatures);
+	if(0 == simulator->getProcessNumber()){
+		vector<double> finalTemperatures = simulator->getFinalTemperatures();
+		printTemperatures(finalTemperatures);
+	}
 
+	MPI_Finalize();
 	return 0;
 }

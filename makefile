@@ -1,4 +1,5 @@
 CC = g++
+MPICC = mpic++
 
 SRC_DIR = src
 TEST_DIR = test
@@ -13,7 +14,7 @@ INC_PATHS = -I$(INC_DIR) -I$(OBJ_DIR)
 VPATH = $(INC_DIR) $(EXAMPLE_DIR) $(OBJ_DIR) $(LIB_DIR) $(SRC_DIR) $(TEST_DIR)
 
 main:
-	$(CC) -std=c++11 -stdlib=libc++ $(SRC_DIR)/*.cc -o $(BIN_DIR)/main.bin
+	$(MPICC) -std=c++11 -stdlib=libc++ $(SRC_DIR)/*.cc -o $(BIN_DIR)/main.bin
 
 test: googletest main
 	$(CC) -I$(TEST_DIR) -std=c++11 -stdlib=libc++ -DGTEST_USE_OWN_TR1_TUPLE=1 $(TEST_DIR)/*.cc $(LIB_DIR)/libgtest.a -o $(BIN_DIR)/test.bin

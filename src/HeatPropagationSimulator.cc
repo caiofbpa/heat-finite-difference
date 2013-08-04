@@ -20,7 +20,7 @@ protected:
 	}
 
 public:
-	void setInitialTemperatures(vector<double> temperatures){
+	virtual void setInitialTemperatures(vector<double> temperatures){
 		this->initialTemperatures = temperatures;
 	}
 
@@ -28,9 +28,9 @@ public:
 		return this->finalTemperatures;
 	}
 
-	void simulateIterations(int seconds){
+	virtual void simulateIterations(int iterations){
 		this->finalTemperatures = this->initialTemperatures;
-		for(int i = 0; i < seconds; i++)
+		for(int i = 0; i < iterations; i++)
 			finalTemperatures = simulateNextTemperatures(finalTemperatures);
 	}
 };

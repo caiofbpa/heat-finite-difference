@@ -1,8 +1,13 @@
 #include "gtest/gtest.h"
 #include <vector>
+#include <thread>
 #include "../src/HeatPropagationSimulator.cc"
 
 using namespace std;
+
+string initialTemperatures;
+int iterations;
+string expectedTemperatures;
 
 string getOutputFromStream(FILE* stream){
 	char buffer[512];
@@ -12,64 +17,80 @@ string getOutputFromStream(FILE* stream){
     return output;
 }
 
-string executeCommand(string command){
-	FILE* stream = popen(command.c_str(), "r");
+string executeCommand(char* command){
+	FILE* stream = popen(command, "r");
 	string output = getOutputFromStream(stream);
 	pclose(stream);
 	return output;
 }
 
-TEST(ParallelHeatFiniteDifferenceTestSuite, ZeroTemperature_SteadyState_AllTemperaturesShouldStayTheSame){
-	string output = executeCommand("bin/main.bin 0 0 0 1");
-    ASSERT_EQ("0.000 0.000 0.000 \n", output);
+int getNumberOfCoresAvailable(){
+	// if(0 == thread::hardware_concurrency())
+	// 	return 1;
+	// else
+	// 	return thread::hardware_concurrency();
+	return 2;
 }
 
-TEST(ParallelHeatFiniteDifferenceTestSuite, SameTemperature_SteadyState_AllTemperaturesShouldStayTheSame){
-	string output = executeCommand("bin/main.bin 1 1 1 1");
-    ASSERT_EQ("1.000 1.000 1.000 \n", output);
+void assertTemperaturesAreEqualToExpectedWhenExecutedInNCores(int cores){
+	char buffer[512];
+	sprintf(buffer, "mpirun -n %d bin/main.bin %s %d", cores, initialTemperatures.c_str(), iterations);
+	string actualTemperatures = executeCommand(buffer);
+	ASSERT_EQ(expectedTemperatures, actualTemperatures);
 }
 
-TEST(ParallelHeatFiniteDifferenceTestSuite, GivenACoolNeighbour_MiddleTemperatureShouldCool){
-	string output = executeCommand("bin/main.bin 20 20 0 1");
-    ASSERT_EQ("20.000 16.000 0.000 \n", output);
+void assertTemperaturesAreEqualToExpectedWhenExecutedInMultipleCores(){
+	int cores = getNumberOfCoresAvailable();
+	for(int i = 1; i <= cores; i++){
+		assertTemperaturesAreEqualToExpectedWhenExecutedInNCores(i);
+	}
 }
 
-TEST(ParallelHeatFiniteDifferenceTestSuite, GivenAHotNeighbour_MiddleTemperatureShouldHeat){
-	string output = executeCommand("bin/main.bin 20 20 50 1");
-    ASSERT_EQ("20.000 26.000 50.000 \n", output);
+TEST(ParallelHeatFiniteDifferenceTestSuite, SteadyState_SameTemperatures){
+	initialTemperatures = "1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000";
+	iterations = 1;
+	expectedTemperatures = "1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 ";
+    assertTemperaturesAreEqualToExpectedWhenExecutedInMultipleCores();
 }
 
-TEST(ParallelHeatFiniteDifferenceTestSuite, ThreeTemperatures_Integration_Case1){
-	string output = executeCommand("bin/main.bin 24.802 29.657 34.604 1");
-    ASSERT_EQ("24.802 29.675 34.604 \n", output);
+TEST(ParallelHeatFiniteDifferenceTestSuite, SteadyState_SameTemperatures_ManyIterations){
+	initialTemperatures = "1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000";
+	iterations = 99;
+	expectedTemperatures = "1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 1.000 ";
+    assertTemperaturesAreEqualToExpectedWhenExecutedInMultipleCores();
 }
 
-TEST(ParallelHeatFiniteDifferenceTestSuite, ThreeTemperatures_Integration_Case2){
-	string output = executeCommand("bin/main.bin 39.976 44.986 50 1");
-    ASSERT_EQ("39.976 44.987 50.000 \n", output);
+TEST(ParallelHeatFiniteDifferenceTestSuite, SteadyState_DifferentTemperatures){
+	initialTemperatures = "10 20 30 40 50 60 70 80 90 100 110 120";
+	iterations = 1;
+	expectedTemperatures = "10.000 20.000 30.000 40.000 50.000 60.000 70.000 80.000 90.000 100.000 110.000 120.000 ";
+    assertTemperaturesAreEqualToExpectedWhenExecutedInMultipleCores();
 }
 
-TEST(ParallelHeatFiniteDifferenceTestSuite, FourTemperatures_Integration_Case1){
-	string output = executeCommand("bin/main.bin 20 20 16 0 1");
-    ASSERT_EQ("20.000 19.200 13.600 0.000 \n", output);
+TEST(ParallelHeatFiniteDifferenceTestSuite, SteadyState_DifferentTemperatures_ManyIterations){
+	initialTemperatures = "10 20 30 40 50 60 70 80 90 100 110 120";
+	iterations = 99;
+	expectedTemperatures = "10.000 20.000 30.000 40.000 50.000 60.000 70.000 80.000 90.000 100.000 110.000 120.000 ";
+    assertTemperaturesAreEqualToExpectedWhenExecutedInMultipleCores();
 }
 
-TEST(ParallelHeatFiniteDifferenceTestSuite, FourTemperatures_Integration_Case2){
-	string output = executeCommand("bin/main.bin 38.4 30 22 26 1");
-    ASSERT_EQ("38.400 30.080 24.400 26.000 \n", output);
+TEST(ParallelHeatFiniteDifferenceTestSuite, Integration_Asymmetric){
+	initialTemperatures = "20 100 90 80 70 60 50 40 30 20 10 50";
+	iterations = 1;
+	expectedTemperatures = "20.000 82.000 90.000 80.000 70.000 60.000 50.000 40.000 30.000 20.000 20.000 50.000 ";
+    assertTemperaturesAreEqualToExpectedWhenExecutedInMultipleCores();
 }
 
-TEST(ParallelHeatFiniteDifferenceTestSuite, SevenTemperatures_Integration){
-	string output = executeCommand("bin/main.bin 20 50 40 30 20 10 50 1");
-    ASSERT_EQ("20.000 42.000 40.000 30.000 20.000 20.000 50.000 \n", output);
+TEST(ParallelHeatFiniteDifferenceTestSuite, Integration_Asymmetric_ManyIterations){
+	initialTemperatures = "20 100 90 80 70 60 50 40 30 20 10 50";
+	iterations = 99;
+	expectedTemperatures = "20.000 24.177 28.228 32.040 35.524 38.623 41.313 43.607 45.547 47.199 48.651 50.000 ";
+    assertTemperaturesAreEqualToExpectedWhenExecutedInMultipleCores();
 }
 
-TEST(ParallelHeatFiniteDifferenceTestSuite, SevenAsymmetricTemperatures_Integration_AfterLongTime){
-	string output = executeCommand("bin/main.bin 20 50 40 30 20 10 50 99");
-    ASSERT_EQ("20.000 24.987 29.977 34.973 39.977 44.987 50.000 \n", output);
-}
-
-TEST(ParallelHeatFiniteDifferenceTestSuite, SevenSymmetricTemperatures_Integration_AfterLongTime){
-	string output = executeCommand("bin/main.bin 0 20 20 20 20 20 20 20 20 20 0 100");
-    ASSERT_EQ("0.000 1.081 2.055 2.829 3.326 3.497 3.326 2.829 2.055 1.081 0.000 \n", output);
+TEST(ParallelHeatFiniteDifferenceTestSuite, Integration_Symmetric_ManyIterations){
+	initialTemperatures = "0 50 50 50 50 50 50 50 50 50 50 0";
+	iterations = 100;
+	expectedTemperatures = "0.000 3.478 6.674 9.329 11.229 12.219 12.219 11.229 9.329 6.674 3.478 0.000 ";
+    assertTemperaturesAreEqualToExpectedWhenExecutedInMultipleCores();
 }
