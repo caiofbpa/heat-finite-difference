@@ -2,9 +2,13 @@
 #include <mpi.h>
 #include "HeatPropagationSimulator.cc"
 
+#define GHOST_REGION_TAG 111110
+#define FINAL_TEMPERATURES_TAG 111111
+
 class ParallelHeatPropagationSimulator :public HeatPropagationSimulator {
 private:
 	int limit = 0;
+	int ghostRegionSize = 1;
 
 public:
 	int getTotalProcesses(){
@@ -19,8 +23,20 @@ public:
 		return rank;
 	}
 
+	int getNextProcessNumber(){
+		return getProcessNumber() + 1;
+	}
+
+	int getPreviousProcessNumber(){
+		return getProcessNumber() - 1;
+	}
+
 	bool thisIsTheFirstProcess(){
 		return 0 == getProcessNumber();
+	}
+
+	bool thisIsTheLastProcess(){
+		return getProcessNumber() == (getTotalProcesses() - 1);
 	}
 
 	bool thereIsMoreThanOneProcess(){
@@ -30,9 +46,11 @@ public:
 	void divideTemperatures(vector<double> temperatures){
 		limit = ceil(temperatures.size() / getTotalProcesses());
 		if(thisIsTheFirstProcess())
-			this->initialTemperatures = vector<double>(temperatures.begin(), temperatures.begin() + (limit + 1));
+			this->initialTemperatures = vector<double>(temperatures.begin(), temperatures.begin() + (limit + ghostRegionSize));
+		else if(thisIsTheLastProcess())
+			this->initialTemperatures = vector<double>(temperatures.end() - (limit + ghostRegionSize), temperatures.end());
 		else
-			this->initialTemperatures = vector<double>(temperatures.begin() + (limit - 1), temperatures.end());
+			this->initialTemperatures = vector<double>(temperatures.begin() + (limit * getProcessNumber() - ghostRegionSize), temperatures.begin() + (limit * getProcessNumber() + limit + ghostRegionSize));
 	}
 
 	void setInitialTemperatures(vector<double> temperatures){
@@ -42,47 +60,59 @@ public:
 			this->initialTemperatures = temperatures;
 	}
 
-	void receiveTemperatures(){
+	void receiveTemperaturesFromProcess(int processNumber){
 		double temperatures[limit];
 		MPI_Status status;
-		MPI_Recv(&temperatures, limit, MPI_DOUBLE, 1, 111111, MPI_COMM_WORLD, &status);
-		
-		this->finalTemperatures[limit] = temperatures[0];
-		for(int i = 1; i < limit; i++)
+		MPI_Recv(&temperatures, limit, MPI_DOUBLE, processNumber, FINAL_TEMPERATURES_TAG, MPI_COMM_WORLD, &status);
+		for(int i = 0; i < limit; i++)
 			this->finalTemperatures.push_back(temperatures[i]);
 	}
 
-	void sendTemperatures(){
+	void receiveTemperaturesFromAllOtherProcesses(){
+		for(int i = 0; i < ghostRegionSize; i++)
+			this->finalTemperatures.pop_back();
+		for(int i = getNextProcessNumber(); i < getTotalProcesses(); i++)
+			receiveTemperaturesFromProcess(i);
+	}
+
+	void sendTemperaturesToFirstProcess(){
 		double temperatures[limit];
-		for(int i = 1; i < finalTemperatures.size(); i++)
-			temperatures[i - 1] = finalTemperatures[i];
-		MPI_Send(&temperatures, limit, MPI_DOUBLE, 0, 111111, MPI_COMM_WORLD);
+		for(int i = ghostRegionSize; i < limit + ghostRegionSize; i++)
+			temperatures[i - ghostRegionSize] = finalTemperatures[i];
+		MPI_Send(&temperatures, limit, MPI_DOUBLE, 0, FINAL_TEMPERATURES_TAG, MPI_COMM_WORLD);
 	}
 
 	void updateFinalTemperatures(){
 		if(thisIsTheFirstProcess())
-			receiveTemperatures();
+			receiveTemperaturesFromAllOtherProcesses();
 		else
-			sendTemperatures();
+			sendTemperaturesToFirstProcess();
 	}
 
-	void updateLastTemperatures(){
-		MPI_Send(&finalTemperatures[limit - 1], 1, MPI_DOUBLE, 1, 111111, MPI_COMM_WORLD);
+	void updateRightGhostRegion(){
+		MPI_Send(&finalTemperatures[(finalTemperatures.size() - 1) - ghostRegionSize], ghostRegionSize, MPI_DOUBLE, getNextProcessNumber(), GHOST_REGION_TAG, MPI_COMM_WORLD);
 		MPI_Status status;
-		MPI_Recv(&finalTemperatures[limit], 1, MPI_DOUBLE, 1, 111111, MPI_COMM_WORLD, &status);
+		MPI_Recv(&finalTemperatures[(finalTemperatures.size() - 1)], ghostRegionSize, MPI_DOUBLE, getNextProcessNumber(), GHOST_REGION_TAG, MPI_COMM_WORLD, &status);
 	}
 
-	void updateFirstTemperatures(){
+	void updateLeftGhostRegion(){
 		MPI_Status status;
-		MPI_Recv(&finalTemperatures[0], 1, MPI_DOUBLE, 0, 111111, MPI_COMM_WORLD, &status);
-		MPI_Send(&finalTemperatures[1], 1, MPI_DOUBLE, 0, 111111, MPI_COMM_WORLD);
+		MPI_Recv(&finalTemperatures[0], ghostRegionSize, MPI_DOUBLE, getPreviousProcessNumber(), GHOST_REGION_TAG, MPI_COMM_WORLD, &status);
+		MPI_Send(&finalTemperatures[0 + ghostRegionSize], ghostRegionSize, MPI_DOUBLE, getPreviousProcessNumber(), GHOST_REGION_TAG, MPI_COMM_WORLD);
 	}
 
-	void updateGhostCells(){
+	void updateBothGhostRegions(){
+		updateLeftGhostRegion();
+		updateRightGhostRegion();
+	}
+
+	void updateGhostRegions(){
 		if(thisIsTheFirstProcess())
-			updateLastTemperatures();
+			updateRightGhostRegion();
+		else if (thisIsTheLastProcess())
+			updateLeftGhostRegion();
 		else
-			updateFirstTemperatures();
+			updateBothGhostRegions();
 	}
 
 	void simulateIterations(int iterations){
@@ -90,7 +120,7 @@ public:
 		for(int i = 0; i < iterations; i++){
 			finalTemperatures = simulateNextTemperatures(finalTemperatures);
 			if(thereIsMoreThanOneProcess())
-				updateGhostCells();
+				updateGhostRegions();
 		}
 		if(thereIsMoreThanOneProcess())
 			updateFinalTemperatures();

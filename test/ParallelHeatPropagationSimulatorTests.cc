@@ -25,18 +25,17 @@ string executeCommand(char* command){
 }
 
 int getNumberOfCoresAvailable(){
-	// if(0 == thread::hardware_concurrency())
-	// 	return 1;
-	// else
-	// 	return thread::hardware_concurrency();
-	return 2;
+	if(0 == thread::hardware_concurrency())
+		return 1;
+	else
+		return thread::hardware_concurrency();
 }
 
 void assertTemperaturesAreEqualToExpectedWhenExecutedInNCores(int cores){
 	char buffer[512];
 	sprintf(buffer, "mpirun -n %d bin/main.bin %s %d", cores, initialTemperatures.c_str(), iterations);
 	string actualTemperatures = executeCommand(buffer);
-	ASSERT_EQ(expectedTemperatures, actualTemperatures);
+	ASSERT_EQ(expectedTemperatures, actualTemperatures) << "When running with " << cores << " cores";
 }
 
 void assertTemperaturesAreEqualToExpectedWhenExecutedInMultipleCores(){
