@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <mpi.h>
 #include "ParallelHeatPropagationSimulator.cc"
 
 using namespace std;
@@ -22,8 +21,11 @@ int parseNumberOfIterationsFromArguments(int argc, char* argv[]){
 }
 
 int main(int argc, char* argv[]){
-	MPI_Init(&argc, &argv);
+	MPIWrapper* mpi = new MPIWrapper();
+	mpi->initialise();
+	
 	ParallelHeatPropagationSimulator* simulator = new ParallelHeatPropagationSimulator();
+
 	
 	vector<double> initialTemperatures = parseVectorFromArguments(argc, argv);
 	int iterations = parseNumberOfIterationsFromArguments(argc, argv);
@@ -31,11 +33,11 @@ int main(int argc, char* argv[]){
 	simulator->setInitialTemperatures(initialTemperatures);
 	simulator->simulateIterations(iterations);
 	
-	if(0 == simulator->getProcessNumber()){
+	if(0 == mpi->getProcessNumber()){
 		vector<double> finalTemperatures = simulator->getFinalTemperatures();
 		printTemperatures(finalTemperatures);
 	}
 
-	MPI_Finalize();
+	mpi->finalise();
 	return 0;
 }
