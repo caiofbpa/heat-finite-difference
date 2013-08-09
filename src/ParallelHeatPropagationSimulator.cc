@@ -5,7 +5,7 @@
 #define GHOST_REGION_TAG 111110
 #define FINAL_TEMPERATURES_TAG 111111
 
-class ParallelHeatPropagationSimulator :public HeatPropagationSimulator {
+class ParallelHeatPropagationSimulator: public HeatPropagationSimulator {
 private:
 	int limit = 0;
 	int ghostRegionSize = 1;

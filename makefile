@@ -18,7 +18,6 @@ main:
 
 test: googletest main
 	$(CC) -I$(TEST_DIR) -std=c++11 -stdlib=libc++ -DGTEST_USE_OWN_TR1_TUPLE=1 $(TEST_DIR)/*.cc $(LIB_DIR)/libgtest.a -o $(BIN_DIR)/test.bin
-	./$(BIN_DIR)/test.bin
 
 googletest:
 	$(CC) -I$(TEST_DIR) -std=c++11 -stdlib=libc++ -DGTEST_USE_OWN_TR1_TUPLE=1 -c $(GTEST_DIR)/gtest-all.cc -o $(OBJ_DIR)/gtest-all.o
